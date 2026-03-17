@@ -1,8 +1,27 @@
 import Stripe from 'stripe';
 
-// ── Stripe singleton (server-side only) ─────────────────────────────────────
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2026-02-25.clover',
+// ── Stripe singleton (server-side only, lazy) ────────────────────────────────
+// Using a lazy getter so the Stripe client is only instantiated at runtime
+// (when STRIPE_SECRET_KEY is available), not at build time / static analysis.
+let _stripe: Stripe | null = null;
+
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error('STRIPE_SECRET_KEY environment variable is not set');
+    }
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2026-02-25.clover',
+    });
+  }
+  return _stripe;
+}
+
+// Convenience alias used throughout the app
+export const stripe = new Proxy({} as Stripe, {
+  get(_target, prop) {
+    return (getStripe() as unknown as Record<string | symbol, unknown>)[prop];
+  },
 });
 
 // ── Credit packages ──────────────────────────────────────────────────────────
