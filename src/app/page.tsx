@@ -2,17 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import { FacebookLogo, TwitterLogo, LinkedInLogo, InstagramLogo, ThreadsLogo } from '@/components/PlatformLogos';
 
 export default function HomePage() {
   const [trialEmail, setTrialEmail] = useState('');
-  const [trialPassword, setTrialPassword] = useState('');
   const [trialLoading, setTrialLoading] = useState(false);
   const [trialError, setTrialError] = useState('');
   const [trialSuccess, setTrialSuccess] = useState(false);
-  const router = useRouter();
 
   const handleTrial = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +19,7 @@ export default function HomePage() {
       const res = await fetch('/api/trial', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: trialEmail, password: trialPassword }),
+        body: JSON.stringify({ email: trialEmail }),
       });
 
       const data = await res.json();
@@ -34,22 +30,8 @@ export default function HomePage() {
         return;
       }
 
-      // Account created — now sign them in automatically
-      const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: trialEmail,
-        password: trialPassword,
-      });
-
-      if (signInError) {
-        // Account was created but auto-login failed
-        setTrialSuccess(true);
-        setTrialLoading(false);
-        return;
-      }
-
-      // Redirect to dashboard
-      router.push('/dashboard');
+      setTrialSuccess(true);
+      setTrialLoading(false);
     } catch {
       setTrialError('Something went wrong. Please try again.');
       setTrialLoading(false);
@@ -77,7 +59,7 @@ export default function HomePage() {
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           <Link href="/login" className="btn btn-ghost">Log In</Link>
-          <Link href="/signup" className="btn btn-primary">Get Started</Link>
+          <a href="#free-trial" className="btn btn-primary">Get Started</a>
         </div>
       </nav>
 
@@ -124,7 +106,7 @@ export default function HomePage() {
         </p>
 
         {/* Try for Free CTA */}
-        <div className="card" style={{
+        <div id="free-trial" className="card" style={{
           maxWidth: '520px',
           width: '100%',
           padding: '2rem',
@@ -132,6 +114,7 @@ export default function HomePage() {
           background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.06) 100%)',
           boxShadow: '0 0 60px rgba(99, 102, 241, 0.1)',
           marginBottom: '1.5rem',
+          scrollMarginTop: '5rem',
         }}>
           <div style={{ marginBottom: '1.25rem' }}>
             <div style={{
@@ -155,24 +138,26 @@ export default function HomePage() {
               Try it <span className="text-gradient">free</span>
             </h2>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-              Create an account and get 1 free credit to generate 15 posts instantly.
+              Enter your email — we&apos;ll create your account and send you a magic link to get started instantly.
             </p>
           </div>
 
           {trialSuccess ? (
             <div style={{
-              padding: '1rem',
+              padding: '1.25rem',
               borderRadius: '0.75rem',
               background: 'rgba(52, 211, 153, 0.1)',
               border: '1px solid rgba(52, 211, 153, 0.25)',
               textAlign: 'center',
             }}>
-              <p style={{ color: 'var(--success)', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                ✓ Account created!
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✉️</div>
+              <p style={{ color: 'var(--success)', fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.4rem' }}>
+                Account created — check your inbox!
               </p>
-              <Link href="/login" className="btn btn-primary btn-sm">
-                Log in to get started →
-              </Link>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: 1.5, margin: 0 }}>
+                We sent a magic link to <strong style={{ color: 'var(--text-primary)' }}>{trialEmail}</strong>.
+                Click it to sign in and use your free credit.
+              </p>
             </div>
           ) : (
             <form onSubmit={handleTrial}>
@@ -185,17 +170,6 @@ export default function HomePage() {
                   value={trialEmail}
                   onChange={(e) => setTrialEmail(e.target.value)}
                   required
-                  style={{ fontSize: '0.9rem' }}
-                />
-                <input
-                  id="trial-password"
-                  type="password"
-                  className="input"
-                  placeholder="Choose a password (6+ characters)"
-                  value={trialPassword}
-                  onChange={(e) => setTrialPassword(e.target.value)}
-                  required
-                  minLength={6}
                   style={{ fontSize: '0.9rem' }}
                 />
                 {trialError && (
@@ -219,7 +193,7 @@ export default function HomePage() {
                   {trialLoading ? (
                     <div className="spinner" />
                   ) : (
-                    'Try for Free →'
+                    '✉️ Get My Free Credit →'
                   )}
                 </button>
               </div>
@@ -227,7 +201,7 @@ export default function HomePage() {
           )}
 
           <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.85rem', lineHeight: 1.5 }}>
-            No credit card needed. Your free credit lets you repurpose 1 article into 15 platform-ready posts.
+            No password. No credit card. Just your email — we&apos;ll send you a magic sign-in link.
           </p>
         </div>
 
@@ -368,13 +342,13 @@ export default function HomePage() {
                   <li style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>✓ No credit on failed scrapes</li>
                   <li style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 600 }}>⏱ Saves you {pack.timeSaved}</li>
                 </ul>
-                <Link
-                  href="/signup"
+                <a
+                  href="#free-trial"
                   className={pack.popular ? 'btn btn-primary' : 'btn btn-secondary'}
-                  style={{ width: '100%', textAlign: 'center' }}
+                  style={{ width: '100%', textAlign: 'center', display: 'block' }}
                 >
                   Get Started
-                </Link>
+                </a>
               </div>
             ))}
           </div>

@@ -3,24 +3,28 @@
 import { useState, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect') || '/dashboard';
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${redirect}`,
+      },
+    });
 
     if (error) {
       setError(error.message);
@@ -28,8 +32,8 @@ function LoginForm() {
       return;
     }
 
-    router.push(redirect);
-    router.refresh();
+    setSent(true);
+    setLoading(false);
   };
 
   const handleGoogleLogin = async () => {
@@ -41,6 +45,37 @@ function LoginForm() {
       },
     });
   };
+
+  if (sent) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '2rem',
+      }}>
+        <div className="card" style={{ maxWidth: '420px', textAlign: 'center', padding: '2.5rem' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✉️</div>
+          <h2 style={{ fontWeight: 700, marginBottom: '0.75rem' }}>Check your inbox</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6 }}>
+            We&apos;ve sent a magic link to{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>.
+            Click it to sign in instantly — no password needed.
+          </p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '1rem' }}>
+            Didn&apos;t get it? Check your spam folder or{' '}
+            <button
+              onClick={() => { setSent(false); setEmail(''); }}
+              style={{ background: 'none', border: 'none', color: 'var(--accent-primary-hover)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500, padding: 0 }}
+            >
+              try again
+            </button>.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -83,14 +118,14 @@ function LoginForm() {
             fontSize: '0.8rem',
           }}>
             <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
-            or
+            or sign in with a magic link
             <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
           </div>
 
-          {/* Email/Password Form */}
-          <form onSubmit={handleLogin}>
-            <div style={{ marginBottom: '1rem' }}>
-              <label className="label" htmlFor="email">Email</label>
+          {/* Magic Link Form */}
+          <form onSubmit={handleMagicLink}>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label className="label" htmlFor="email">Email address</label>
               <input
                 id="email"
                 type="email"
@@ -98,19 +133,6 @@ function LoginForm() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label className="label" htmlFor="password">Password</label>
-              <input
-                id="password"
-                type="password"
-                className="input"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
@@ -130,16 +152,20 @@ function LoginForm() {
             )}
 
             <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-              {loading ? <div className="spinner" /> : 'Log In'}
+              {loading ? <div className="spinner" /> : '✉️ Send Magic Link'}
             </button>
           </form>
+
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '1rem', lineHeight: 1.5 }}>
+            We&apos;ll email you a secure, one-click sign-in link. No password required.
+          </p>
         </div>
 
         <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
           Don&apos;t have an account?{' '}
-          <Link href="/signup" style={{ color: 'var(--accent-primary-hover)', textDecoration: 'none', fontWeight: 500 }}>
-            Sign up
-          </Link>
+          <a href="/#free-trial" style={{ color: 'var(--accent-primary-hover)', textDecoration: 'none', fontWeight: 500 }}>
+            Sign up free
+          </a>
         </p>
       </div>
     </div>

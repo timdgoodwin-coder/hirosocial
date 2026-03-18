@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
+    const { email } = await request.json();
 
-    if (!email || !password) {
+    if (!email) {
       return NextResponse.json(
-        { success: false, error: 'Email and password are required.' },
-        { status: 400 }
-      );
-    }
-
-    if (password.length < 6) {
-      return NextResponse.json(
-        { success: false, error: 'Password must be at least 6 characters.' },
+        { success: false, error: 'Email is required.' },
         { status: 400 }
       );
     }
@@ -30,24 +24,36 @@ export async function POST(request: NextRequest) {
 
     const adminClient = createAdminClient();
 
-    // Create user via admin API (bypasses email confirmation)
+    // Check if user already exists
+    const { data: existingUsers } = await adminClient.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(
+      (u) => u.email?.toLowerCase() === email.toLowerCase()
+    );
+
+    if (existingUser) {
+      // User already exists — just send them a magic link to log in
+      const supabase = await createClient();
+      await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://hirosocial.com'}/auth/callback`,
+        },
+      });
+      return NextResponse.json({
+        success: true,
+        existing: true,
+        message: 'A magic link has been sent to your email.',
+      });
+    }
+
+    // Create user via admin API (sets email as confirmed so they can sign in immediately)
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email,
-      password,
-      email_confirm: true, // Auto-confirm so they can start immediately
+      email_confirm: true,
       user_metadata: { full_name: null },
     });
 
     if (authError) {
-      // Handle duplicate email
-      if (authError.message?.toLowerCase().includes('already') || 
-          authError.message?.toLowerCase().includes('exists') ||
-          authError.message?.toLowerCase().includes('duplicate')) {
-        return NextResponse.json(
-          { success: false, error: 'An account with this email already exists. Please log in instead.' },
-          { status: 409 }
-        );
-      }
       console.error('Trial signup auth error:', authError);
       return NextResponse.json(
         { success: false, error: authError.message || 'Failed to create account. Please try again.' },
@@ -64,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     const userId = authData.user.id;
 
-    // Wait a moment for the trigger to create the profile
+    // Wait a moment for the DB trigger to create the profile
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Give them 1 free credit
@@ -75,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     if (creditError) {
       console.error('Trial credit update error:', creditError);
-      // Account was created but credit failed — still okay, they can log in
+      // Account was created but credit failed — still okay
     }
 
     // Log the credit transaction
@@ -88,9 +94,25 @@ export async function POST(request: NextRequest) {
         stripe_session_id: 'free_trial',
       });
 
+    // Send magic link so they can sign in (no password needed)
+    const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hirosocial.com';
+    const supabase = await createClient();
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${siteUrl}/auth/callback`,
+        shouldCreateUser: false, // User already created above
+      },
+    });
+
+    if (otpError) {
+      console.error('Magic link send error:', otpError);
+      // Account + credit created — user can still go to /login to request a link themselves
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Account created! You have 1 free credit to try HiroSocial.',
+      message: 'Account created! Check your email for a magic sign-in link.',
     });
   } catch (error) {
     console.error('Trial API error:', error);
