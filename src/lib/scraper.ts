@@ -1,4 +1,3 @@
-import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
 import * as cheerio from 'cheerio';
 
@@ -174,7 +173,7 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
 
   // ---- Step 6: Fall back to Readability ----
   if (!extracted || extracted.content.length < MIN_CONTENT_LENGTH) {
-    extracted = tryReadability(cleanedHtml, parsedUrl.href);
+    extracted = await tryReadability(cleanedHtml, parsedUrl.href);
   }
 
   // ---- Step 7: Last resort – raw paragraph extraction ----
@@ -455,8 +454,10 @@ function tryCheerioExtraction(html: string): ExtractedContent | null {
 // STRATEGY 2: Mozilla Readability (fallback)
 // =============================================================================
 
-function tryReadability(html: string, url: string): ExtractedContent | null {
+async function tryReadability(html: string, url: string): Promise<ExtractedContent | null> {
   try {
+    // Dynamic import to avoid CJS/ESM conflict with jsdom's transitive deps (e.g. @exodus/bytes)
+    const { JSDOM } = await import('jsdom');
     const dom = new JSDOM(html, { url });
     const reader = new Readability(dom.window.document, {
       charThreshold: 100,
