@@ -100,12 +100,16 @@ SPELLING: ${spellingNote}
 
 PLATFORM-SPECIFIC GUIDELINES:
 
-TWITTER/X (max 280 characters per post):
-• Every character counts — be ruthlessly concise
-• Lead with the strongest hook; frontload value in the first line
-• Hashtags: 0-2 max, only if genuinely relevant (not forced)
-• Use line breaks sparingly for impact
-• End with a question or bold statement when natural
+TWITTER/X — STRICT LIMIT: every post MUST be under 280 characters. Never truncate or cut off mid-word to fit. If a post is too long, rewrite it shorter.
+• HOOK IMMEDIATELY — the first line does all the heavy lifting. If it doesn't earn the scroll-stop, nothing else matters.
+• ONE IDEA, DONE WELL — make a single point with clarity and confidence. Don't cram in multiple thoughts.
+• SHORT SENTENCES. WHITE SPACE. — reading on a phone should feel effortless. Dense text gets skipped.
+• SPECIFICITY BEATS VAGUENESS — concrete details and real numbers from the article create credibility. "Lost 6kg in 10 weeks" beats "got healthier."
+• NATURAL VOICE — write how a real person talks. Posts that sound human outperform polished corporate copy.
+• END WITH WEIGHT — the last line should land. A sharp conclusion, a reframe, a question, or a provocative statement. Never trail off.
+• NO FILLER — cut "just wanted to share", "in my opinion", "as someone who…" openers. Start with the thing itself.
+• NO ENGAGEMENT BAIT — no "RT if you agree" or hollow calls to action. Earn engagement by being genuinely good.
+• Hashtags: 0-2 max, only if genuinely relevant
 • Emojis: 0-1 max, only if it adds personality
 
 LINKEDIN (up to 3000 characters):
@@ -227,10 +231,14 @@ export async function generatePosts(input: GeneratePostsInput): Promise<Generate
       const content = post.content || '';
       const maxLen = PLATFORM_CONFIG[platform].maxLength;
 
-      // Enforce character limits
-      const trimmedContent = content.length > maxLen
-        ? content.substring(0, maxLen - 3) + '...'
-        : content;
+      // Enforce character limits — trim at word boundary, never mid-word
+      let trimmedContent = content;
+      if (content.length > maxLen) {
+        const cutoff = content.lastIndexOf(' ', maxLen - 2);
+        trimmedContent = cutoff > 0
+          ? content.substring(0, cutoff) + '…'
+          : content.substring(0, maxLen - 1) + '…';
+      }
 
       return {
         variant: index + 1,
