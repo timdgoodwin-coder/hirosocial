@@ -456,10 +456,11 @@ function tryCheerioExtraction(html: string): ExtractedContent | null {
 
 async function tryReadability(html: string, url: string): Promise<ExtractedContent | null> {
   try {
-    // Dynamic import to avoid CJS/ESM conflict with jsdom's transitive deps (e.g. @exodus/bytes)
-    const { JSDOM } = await import('jsdom');
-    const dom = new JSDOM(html, { url });
-    const reader = new Readability(dom.window.document, {
+    // Use linkedom instead of jsdom — it's CJS-compatible and avoids the
+    // @exodus/bytes ESM conflict that crashes Vercel serverless cold starts.
+    const { parseHTML } = await import('linkedom');
+    const { document } = parseHTML(html);
+    const reader = new Readability(document as unknown as Document, {
       charThreshold: 100,
     });
     const article = reader.parse();

@@ -108,7 +108,12 @@ export async function POST(request: NextRequest) {
 
     if (otpError) {
       console.error('Magic link send error:', otpError);
-      // Account + credit created — user can still go to /login to request a link themselves
+      // Account + credit created but email failed — tell the user to log in manually
+      return NextResponse.json({
+        success: true,
+        emailFailed: true,
+        message: 'Account created with 1 free credit! We couldn\'t send the sign-in email right now — please go to the login page and request a magic link.',
+      });
     }
 
     return NextResponse.json({

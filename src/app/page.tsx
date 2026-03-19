@@ -9,6 +9,7 @@ export default function HomePage() {
   const [trialLoading, setTrialLoading] = useState(false);
   const [trialError, setTrialError] = useState('');
   const [trialSuccess, setTrialSuccess] = useState(false);
+  const [trialEmailFailed, setTrialEmailFailed] = useState(false);
 
   const handleTrial = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +32,7 @@ export default function HomePage() {
       }
 
       setTrialSuccess(true);
+      setTrialEmailFailed(!!data.emailFailed);
       setTrialLoading(false);
     } catch {
       setTrialError('Something went wrong. Please try again.');
@@ -146,18 +148,39 @@ export default function HomePage() {
             <div style={{
               padding: '1.25rem',
               borderRadius: '0.75rem',
-              background: 'rgba(52, 211, 153, 0.1)',
-              border: '1px solid rgba(52, 211, 153, 0.25)',
+              background: trialEmailFailed ? 'rgba(251, 191, 36, 0.1)' : 'rgba(52, 211, 153, 0.1)',
+              border: trialEmailFailed ? '1px solid rgba(251, 191, 36, 0.25)' : '1px solid rgba(52, 211, 153, 0.25)',
               textAlign: 'center',
             }}>
-              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✉️</div>
-              <p style={{ color: 'var(--success)', fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.4rem' }}>
-                Account created — check your inbox!
-              </p>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: 1.5, margin: 0 }}>
-                We sent a magic link to <strong style={{ color: 'var(--text-primary)' }}>{trialEmail}</strong>.
-                Click it to sign in and use your free credit.
-              </p>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{trialEmailFailed ? '✅' : '✉️'}</div>
+              {trialEmailFailed ? (
+                <>
+                  <p style={{ color: 'var(--success)', fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.4rem' }}>
+                    Account created with 1 free credit!
+                  </p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: 1.5, marginBottom: '0.75rem' }}>
+                    We couldn&apos;t send the sign-in email right now.
+                    Head to the login page to request a magic link.
+                  </p>
+                  <Link
+                    href="/login"
+                    className="btn btn-primary"
+                    style={{ fontSize: '0.85rem' }}
+                  >
+                    Go to Login →
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <p style={{ color: 'var(--success)', fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.4rem' }}>
+                    Account created — check your inbox!
+                  </p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: 1.5, margin: 0 }}>
+                    We sent a magic link to <strong style={{ color: 'var(--text-primary)' }}>{trialEmail}</strong>.
+                    Click it to sign in and use your free credit.
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <form onSubmit={handleTrial}>
